@@ -11,33 +11,40 @@ from services.volume_service import get_volume_data
 from services.bollinger_service import get_bollinger_bands
 from services.mvrv_service import get_mvrv_data
 from services.macro_service import get_macro_indicators
-from services.ai_insight_service import get_ai_insight
+from services.ai_insight_service import get_ai_insight, generate_bitcoin_insight
 
 router = APIRouter()
 
+
 @router.get("")
 async def get_dashboard(
-    days: Optional[int] = Query(None, description="Number of days before today"),
-    from_date: Optional[date] = Query(None, description="Start date in YYYY-MM-DD format"),
-    to_date: Optional[date] = Query(None, description="End date in YYYY-MM-DD format"),
+    days: Optional[int] = Query(
+        None, description="Number of days before today"),
+    from_date: Optional[date] = Query(
+        None, description="Start date in YYYY-MM-DD format"),
+    to_date: Optional[date] = Query(
+        None, description="End date in YYYY-MM-DD format"),
 ):
     if days is not None:
         to_date = date.today()
         from_date = to_date - timedelta(days=days)
 
     if not from_date or not to_date:
-        raise HTTPException(status_code=400, detail="Either days or both from_date & to_date are required.")
+        raise HTTPException(
+            status_code=400, detail="Either days or both from_date & to_date are required.")
     if from_date > to_date:
-        raise HTTPException(status_code=400, detail="from_date cannot be after to_date")
+        raise HTTPException(
+            status_code=400, detail="from_date cannot be after to_date")
 
     summary = await get_summary(str(from_date), str(to_date))
     price_data = await get_price_data(str(from_date), str(to_date))
 
     try:
-        insight = await get_ai_insight(summary)
+        insight = await generate_bitcoin_insight(summary)
     except Exception as e:
         print("AI insight error:", str(e))
         insight = "AI insight unavailable at the moment."
+
 
     # ---- 🔹 BTC Price History Calculation ----
     def get_price_on(days_ago: int):
