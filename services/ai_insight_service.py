@@ -1,6 +1,7 @@
 import os
 import httpx
 from xml.etree import ElementTree
+from utils.sentiment_analysis import add_sentiment_to_news
 
 CLAUDE_API_KEY = os.getenv("CLAUDE_API_KEY")
 MODEL = "claude-3-haiku-20240307"
@@ -73,8 +74,9 @@ async def get_ai_insight(summary: dict, latest_news: list[dict]) -> str:
 # 🔗 Unified fetch
 async def generate_bitcoin_insight(summary: dict) -> dict:
     news = await get_latest_bitcoin_news()
-    insight = await get_ai_insight(summary, news)
+    news_with_sentiment = add_sentiment_to_news(news)
+    insight = await get_ai_insight(summary, news_with_sentiment)
     return {
         "insight": insight,
-        "news": news
+        "news": news_with_sentiment
     }
