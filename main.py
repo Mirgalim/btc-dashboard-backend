@@ -14,7 +14,8 @@ app = FastAPI(title="Bitcoin Analytics API")
 origins = [
     "http://localhost:3000",
     "https://btc-dashboard-frontend-evcv.vercel.app",
-    "https://btc-dashboard-backend-1.onrender.com"
+    "https://btc-dashboard-backend-1.onrender.com",
+    "https://btc-dashboard-frontend.vercel.app"
 ]
 
 # CORS тохиргоо
