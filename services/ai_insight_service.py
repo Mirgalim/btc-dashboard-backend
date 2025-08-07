@@ -2,16 +2,17 @@ import os
 import httpx
 from xml.etree import ElementTree
 
-CLAUDE_API_KEY = os.getenv("CLAUDE_API_KEY")  # Claude API token
-MODEL = "claude-3-haiku-20240307"  # хурдан, хямд загвар
+CLAUDE_API_KEY = os.getenv("CLAUDE_API_KEY")
+MODEL = "claude-3-haiku-20240307"
 
-# 🔹 Token-гүй RSS суурьтай BTC мэдээ татах (CoinDesk)
 async def get_latest_bitcoin_news(limit: int = 5) -> str:
     rss_url = "https://www.coindesk.com/arc/outboundfeeds/rss/"
     try:
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(follow_redirects=True) as client:
             r = await client.get(rss_url, timeout=10.0)
             r.raise_for_status()
+
+            from xml.etree import ElementTree
             root = ElementTree.fromstring(r.content)
             items = root.findall(".//item")
             headlines = [item.find("title").text for item in items[:limit]]
@@ -20,7 +21,6 @@ async def get_latest_bitcoin_news(limit: int = 5) -> str:
         print("⚠️ Failed to fetch news (RSS):", e)
         return "No recent news available."
 
-# 🔹 Claude Insight үүсгэх
 async def get_ai_insight(summary: dict, latest_news: str) -> str:
     prompt = (
         f"Bitcoin Summary:\n"
