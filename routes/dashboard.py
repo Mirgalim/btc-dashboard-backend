@@ -40,10 +40,13 @@ async def get_dashboard(
     price_data = await get_price_data(str(from_date), str(to_date))
 
     try:
-        insight = await generate_bitcoin_insight(summary)
+        insight_data = await generate_bitcoin_insight(summary)
     except Exception as e:
         print("AI insight error:", str(e))
-        insight = "AI insight unavailable at the moment."
+        insight_data = {
+            "insight": "AI insight unavailable at the moment.",
+            "news": []
+        }
 
 
     def get_price_on(days_ago: int):
@@ -89,7 +92,8 @@ async def get_dashboard(
         "status": "success",
         "summary": summary,
         "chart": price_data,
-        "insight": insight,
+        "insight": insight_data["insight"],   
+        "news": insight_data["news"],             
         "price": price_data,
         "price_history": price_history,
         "ma": await get_ma_data(str(from_date), str(to_date)),

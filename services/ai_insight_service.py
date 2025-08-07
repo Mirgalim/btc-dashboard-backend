@@ -5,29 +5,39 @@ from xml.etree import ElementTree
 CLAUDE_API_KEY = os.getenv("CLAUDE_API_KEY")
 MODEL = "claude-3-haiku-20240307"
 
-async def get_latest_bitcoin_news(limit: int = 5) -> str:
+# 🔹 BTC News Headlines with Description & Source
+async def get_latest_bitcoin_news(limit: int = 5) -> list[dict]:
     rss_url = "https://www.coindesk.com/arc/outboundfeeds/rss/"
     try:
         async with httpx.AsyncClient(follow_redirects=True) as client:
             r = await client.get(rss_url, timeout=10.0)
             r.raise_for_status()
-
-            from xml.etree import ElementTree
             root = ElementTree.fromstring(r.content)
             items = root.findall(".//item")
-            headlines = [item.find("title").text for item in items[:limit]]
-            return "\n".join(f"- {h}" for h in headlines)
+            headlines = []
+            for item in items[:limit]:
+                title = item.find("title").text
+                link = item.find("link").text
+                desc = item.find("description").text if item.find("description") is not None else ""
+                headlines.append({
+                    "title": title,
+                    "url": link,
+                    "description": desc
+                })
+            return headlines
     except Exception as e:
         print("⚠️ Failed to fetch news (RSS):", e)
-        return "No recent news available."
+        return []
 
-async def get_ai_insight(summary: dict, latest_news: str) -> str:
+# 🧠 Claude Insight (дэлгэрэнгүй 3–4 өгүүлбэр)
+async def get_ai_insight(summary: dict, latest_news: list[dict]) -> str:
+    news_text = "\n".join(f"- {n['title']}: {n['description']}" for n in latest_news)
     prompt = (
         f"Bitcoin Summary:\n"
         f"- Max: {summary['max']}, Min: {summary['min']}, "
         f"Avg: {summary['average']}, Median: {summary['median']}, Volatility: {summary['volatility']}.\n\n"
-        f"Latest News:\n{latest_news}\n\n"
-        f"Based on this summary and news, provide a concise technical 2-sentence insight."
+        f"Latest News:\n{news_text}\n\n"
+        f"Based on the Bitcoin market summary and recent news, provide a 3–4 sentence technical insight with context and reasoning."
     )
 
     headers = {
@@ -38,7 +48,7 @@ async def get_ai_insight(summary: dict, latest_news: str) -> str:
 
     payload = {
         "model": MODEL,
-        "max_tokens": 150,
+        "max_tokens": 500,
         "temperature": 0.7,
         "messages": [
             {"role": "user", "content": prompt}
@@ -60,7 +70,11 @@ async def get_ai_insight(summary: dict, latest_news: str) -> str:
         print("⚠️ AI insight fetch failed:", e)
         return ""
 
-# 🔹 Нэгтгэгч функц
-async def generate_bitcoin_insight(summary: dict) -> str:
-    latest_news = await get_latest_bitcoin_news()
-    return await get_ai_insight(summary, latest_news)
+# 🔗 Unified fetch
+async def generate_bitcoin_insight(summary: dict) -> dict:
+    news = await get_latest_bitcoin_news()
+    insight = await get_ai_insight(summary, news)
+    return {
+        "insight": insight,
+        "news": news
+    }
